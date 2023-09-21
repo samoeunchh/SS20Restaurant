@@ -13,10 +13,12 @@ namespace SS20Restaurant.Controllers
     public class ProductController : Controller
     {
         private readonly AppDbContext _context;
-
-        public ProductController(AppDbContext context)
+        private readonly IWebHostEnvironment _webhost;
+        public ProductController(AppDbContext context,
+            IWebHostEnvironment webhost)
         {
             _context = context;
+            _webhost = webhost;
         }
 
         // GET: Product
@@ -57,11 +59,12 @@ namespace SS20Restaurant.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ProductId,ProductName,Price,QtyOnhand,ReOrderQty,CategoryId,IsProduct")] Product product)
+        public async Task<IActionResult> Create(Product product)
         {
             if (ModelState.IsValid)
             {
                 product.ProductId = Guid.NewGuid();
+                product.Image = UploadFile(product);
                 _context.Add(product);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -69,7 +72,21 @@ namespace SS20Restaurant.Controllers
             ViewData["CategoryId"] = new SelectList(_context.Category, "CategoryId", "CategoryName", product.CategoryId);
             return View(product);
         }
-
+        private string UploadFile(Product product)
+        {
+            var path = "";
+            if(product.File != null)
+            {
+                var dir= Path.Combine(_webhost.WebRootPath, "Images");
+                path = product.ProductId.ToString() + product.File.FileName;
+                var fulpath = Path.Combine(dir, path);
+                using(var stream =new FileStream(fulpath, FileMode.Create))
+                {
+                    product.File.CopyTo(stream);
+                }
+            }
+            return path;
+        }
         // GET: Product/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {

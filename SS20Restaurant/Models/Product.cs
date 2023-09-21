@@ -15,6 +15,9 @@ public class Product
 	public int QtyOnhand { get; set; }
 	public int ReOrderQty { get; set; }
 	public bool IsProduct { get; set; }
+	public string? Image { get; set; }
+	[NotMapped]
+	public IFormFile? File { get; set; }
 	[ForeignKey("Category")]
 	public Guid CategoryId { get; set; }
 	public Category? Category { get; set; }
