@@ -44,8 +44,25 @@ namespace SS20Restaurant.Repository
         {
             try
             {
-                sale.SaleId = Guid.NewGuid();
+                var id = Guid.NewGuid();
                 sale.InvoiceNumber = GenerateInvoiceNumber();
+                if(sale.SaleDetails is not null)
+                {
+                    var detail = sale.SaleDetails;
+                    for(int i = 0; i < detail.Count; i++)
+                    {
+                        sale.SaleDetails[i].SaleId = id;
+                        sale.SaleDetails[i].SaleDetailId = Guid.NewGuid();
+                        //Stock reduce
+                        var product = _context.Product.Where(x => x.ProductId.Equals(detail[i].ProductId) && x.IsProduct).FirstOrDefault();
+                        if(product is not null)
+                        {
+                            _context.Product.Attach(product);
+                            product.QtyOnhand -= detail[i].Qty;
+                        }
+                    }
+                }
+                sale.SaleId = id;
                 _context.Sale.Add(sale);
                 await _context.SaveChangesAsync();
                 return true;

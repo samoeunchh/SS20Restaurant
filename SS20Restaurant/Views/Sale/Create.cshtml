@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = "Create";
 }
-<form asp-action="Create">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="row">
         <div class="col-8">
@@ -69,20 +68,71 @@
             </div>
             <br />
             <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+                <input type="button" id="save" value="Create" class="btn btn-primary" />
             </div>
         </div>
     </div>
-</form>
 
 <div>
     <a asp-action="Index">Back to List</a>
 </div>
 
 @section Scripts {
+    <script src="https://cdn.tutorialjinni.com/jquery-dateFormat/1.0/jquery.dateFormat.min.js"></script>
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
         $(document).ready(function () {
+            $("#IssueDate").val($.format.date(new Date(), 'yyyy-MM-dd'));
+            $("#save").click(function () {
+                var saleDetail = [];
+                var i = 0;
+                $("#SaleList > tbody > tr").each(function () {
+                    var id = document.getElementsByName("ItemId[]")[i].value;
+                    var qty = $(this).closest("tr").find("td:eq(1)").text();
+                    var price = $(this).closest("tr").find("td:eq(2)").text();
+                    var amount = $(this).closest("tr").find("td:eq(3)").text();
+                    saleDetail.push({ ProductId: id, Qty: qty, Price: price, Amount: amount });
+                    i++;
+                });
+                var sale = {
+                    "CustomerId": $("#CustomerId").val(),
+                    "IssueDate": $("#IssueDate").val(),
+                    "Total": $("#Total").val(),
+                    "Discount": $("#Discount").val(),
+                    "GrandTotal": $("#GrandTotal").val(),
+                    "SaleDetails": saleDetail
+                };
+                $.ajax({
+                    method: "POST",
+                    url: "/Sale/Create",
+                    data: sale,
+                    success: function (response) {
+                        window.location.href = "/Sale/Print/" + response;
+                    }, error: function (error) {
+                        console.log(error);
+                    }
+                });
+            });
+            $("#SaleList").on("click", ".plus", function () {
+                var qty = $(this).closest("tr").find("td:eq(1)").text();
+                var price = $(this).closest("tr").find("td:eq(2)").text();
+                $(this).closest("tr").find("td:eq(1)").text(Number(qty) + 1);
+                $(this).closest("tr").find("td:eq(3)").text((Number(qty) + 1) * Number(price));
+                CalcuationTotal();
+            });
+            $("#SaleList").on("click", ".minus", function () {
+                var qty = $(this).closest("tr").find("td:eq(1)").text();
+                if (Number(qty) > 1) {
+                    var price = $(this).closest("tr").find("td:eq(2)").text();
+                    $(this).closest("tr").find("td:eq(1)").text(Number(qty) - 1);
+                    $(this).closest("tr").find("td:eq(3)").text((Number(qty) - 1) * Number(price));
+                    CalcuationTotal();
+                }
+            });
+            $("#SaleList").on("click", ".remove", function () {
+                $(this).closest("tr").remove();
+                CalcuationTotal();
+            });
             $("#Discount").blur(function () {
                 CalcuationTotal();
             });
@@ -95,8 +145,8 @@
                 success: function (data) {
                     $("#productList").empty();
                     $.each(data, function (i, v) {
-                        console.log(v);
-                        var item = "<div class='card item-sale' onClick=AddItem('" + v.productName + "'," + v.price + ")>";
+                        //console.log(v);
+                        var item = "<div class='card item-sale' onClick=AddItem('" + v.productName + "'," + v.price + ",'" + v.productId +"')>";
                         item += "<div class='card-body'>";
                         item += "<img src='../../images/"+ v.image +"' style='height:100px;width:auto'/>";
                         item += "<h4>"+ v.productName + "</h4>";
@@ -109,7 +159,7 @@
                 }
             });
         }
-        function AddItem(name, price) {
+        function AddItem(name, price,id) {
             var b = false;
             $("#SaleList > tbody > tr").each(function () {
                 var productName = $(this).closest("tr").find("td:eq(0)").text();
@@ -123,8 +173,12 @@
                 }
             });
             if (b == false) {
-                var row = "<tr><td>" + name + "</td><td>1</td>";
-                row += "<td>" + price + "</td><td>" + price + "</td><td></td></tr>";
+                var row = "<tr><td><input type='hidden' name='ItemId[]' value='"+ id +"'/>";
+                row += name + "</td><td>1</td>";
+                row += "<td>" + price + "</td><td>" + price + "</td>";
+                row += "<td><button class='btn btn-primary plus'>+</button>";
+                row += "<button class='btn btn-warning minus'>-</button>";
+                row += "<button class='btn btn-danger remove'>R</button></td></tr>";
                 $("#SaleList").append(row);
                 CalcuationTotal();
             }

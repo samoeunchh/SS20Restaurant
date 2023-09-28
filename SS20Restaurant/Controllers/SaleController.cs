@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SS20Restaurant.Data;
+using SS20Restaurant.Models;
 using SS20Restaurant.Repository;
 
 namespace SS20Restaurant.Controllers
@@ -26,11 +27,9 @@ namespace SS20Restaurant.Controllers
             return View(await _sale.GetSale());
         }
 
-        // GET: Sale/Details/5
-        public ActionResult Details(int id)
-        {
-            return View();
-        }
+        // GET: Sale/print/5
+        public async Task<ActionResult?> Print(Guid id)
+            => View(await _content.Sale.Include(x=>x.Customer).Where(x=>x.SaleId.Equals(id)).FirstOrDefaultAsync());
         public async Task<JsonResult> GetProduct(Guid Id)
             => Json(await _content.Product.Where(x => x.CategoryId.Equals(Id)).ToListAsync());
         // GET: Sale/Create
@@ -43,19 +42,19 @@ namespace SS20Restaurant.Controllers
 
         // POST: Sale/Create
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        //[ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(Sale sale)
         {
-            try
+            if (ModelState.IsValid)
             {
-                // TODO: Add insert logic here
-
-                return RedirectToAction(nameof(Index));
+                if(await _sale.Save(sale))
+                {
+                    return Ok(sale.SaleId);
+                }
             }
-            catch
-            {
-                return View();
-            }
+            ViewData["Customer"] = new SelectList(_content.Customer, "CustomerId", "Name",sale.CustomerId);
+            ViewData["CategoryList"] = await _content.Category.ToListAsync();
+            return View();
         }
 
         // GET: Sale/Edit/5
